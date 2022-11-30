@@ -14,7 +14,7 @@
     in {
       formatter = pkgs.alejandra;
       devShells = let
-        buildInputs = with pkgs; [cabal-install z3 haskell-language-server];
+        buildInputs = with pkgs; [cabal-install z3 haskell-language-server ormolu];
       in {
         default = pkgs.mkShell {
           inputsFrom = [simple-smt.env];

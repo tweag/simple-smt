@@ -1,0 +1,19 @@
+name: CI for simple-smt
+on:
+  push:
+    branches: [ master ]
+    pull_request: [ master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Check formatting
+    steps:
+    - uses: actions/checkout@v3.1.0
+    - name: Install nix
+      uses: cachix/install-nix-action@v18
+    - name: Install Nix dependencies
+      run: |
+        nix develop .#z3
+        shopt -s globstar
+        ormolu --mode check Z3/**/*.hs
