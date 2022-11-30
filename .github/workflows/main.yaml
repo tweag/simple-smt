@@ -18,4 +18,5 @@ jobs:
           access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
     - run: |
         shopt -s globstar
-        nix develop .#z3 --command ormolu --mode check Z3/**/*.hs
+        nix-shell
+        ormolu --mode check Z3/**/*.hs
