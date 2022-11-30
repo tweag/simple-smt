@@ -13,8 +13,10 @@ jobs:
     - uses: actions/checkout@v3.1.0
     - name: Install nix
       uses: cachix/install-nix-action@v18
-    - name: Install Nix dependencies
-      run: |
-        nix develop .#z3
+      with:
+        extra_nix_config: |
+          access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+    - run: |
+        nix develop '.#z3'
         shopt -s globstar
         ormolu --mode check Z3/**/*.hs
