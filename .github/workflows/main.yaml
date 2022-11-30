@@ -2,7 +2,8 @@ name: CI for simple-smt
 on:
   push:
     branches: [ master ]
-    pull_request: [ master ]
+    tags: [ "*" ]
+  pull_request:
 
 jobs:
   build:
