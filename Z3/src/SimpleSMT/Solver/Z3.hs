@@ -5,48 +5,49 @@
 
 -- | A module providing a backend that sends commands to Z3 using its C API.
 module SimpleSMT.Solver.Z3
-  ( Z3(..)
-  , new
-  , free
-  , with
-  , toBackend
-  ) where
-
-import qualified SimpleSMT.Solver as Solver
+  ( Z3 (..),
+    new,
+    free,
+    with,
+    toBackend,
+  )
+where
 
 import Control.Exception (bracket)
 import Data.ByteString.Builder.Extra
-  ( defaultChunkSize
-  , smallChunkSize
-  , toLazyByteStringWith
-  , untrimmedStrategy
+  ( defaultChunkSize,
+    smallChunkSize,
+    toLazyByteStringWith,
+    untrimmedStrategy,
   )
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.Map as M
+import Foreign.ForeignPtr (ForeignPtr, finalizeForeignPtr, newForeignPtr)
 import Foreign.Ptr (Ptr)
-import Foreign.ForeignPtr (ForeignPtr, newForeignPtr, finalizeForeignPtr)
 import qualified Language.C.Inline as C
-import qualified Language.C.Inline.Unsafe as CU
 import qualified Language.C.Inline.Context as C
+import qualified Language.C.Inline.Unsafe as CU
 import qualified Language.C.Types as C
+import qualified SimpleSMT.Solver as Solver
 
 data LogicalContext
 
 C.context
-  (C.baseCtx <>
-   C.fptrCtx <>
-   C.bsCtx <>
-   mempty
-     { C.ctxTypesTable =
-         M.singleton (C.TypeName "Z3_context") [t|Ptr LogicalContext|]
-     })
+  ( C.baseCtx
+      <> C.fptrCtx
+      <> C.bsCtx
+      <> mempty
+        { C.ctxTypesTable =
+            M.singleton (C.TypeName "Z3_context") [t|Ptr LogicalContext|]
+        }
+  )
 C.include "z3.h"
 
 data Z3 = Z3
-    { context :: ForeignPtr LogicalContext
-    -- ^ A black-box representing the internal state of the solver.
-    }
+  { -- | A black-box representing the internal state of the solver.
+    context :: ForeignPtr LogicalContext
+  }
 
 -- | Create a new solver instance.
 new :: IO Z3
@@ -57,7 +58,7 @@ new = do
                  } |]
   ctx <-
     newForeignPtr ctxFinalizer
-    =<< [CU.block| Z3_context {
+      =<< [CU.block| Z3_context {
                  Z3_config cfg = Z3_mk_config();
                  Z3_context ctx = Z3_mk_context(cfg);
                  Z3_del_config(cfg);
@@ -80,12 +81,13 @@ toBackend z3 =
     let ctx = context z3
     let cmd' =
           LBS.toStrict $
-          toLazyByteStringWith
-            (untrimmedStrategy smallChunkSize defaultChunkSize)
-            "\NUL"
-            cmd
-    LBS.fromStrict <$>
-      (BS.packCString =<<
-       [CU.exp| const char* {
+            toLazyByteStringWith
+              (untrimmedStrategy smallChunkSize defaultChunkSize)
+              "\NUL"
+              cmd
+    LBS.fromStrict
+      <$> ( BS.packCString
+              =<< [CU.exp| const char* {
                Z3_eval_smtlib2_string($fptr-ptr:(Z3_context ctx), $bs-ptr:cmd')
-               }|])
+               }|]
+          )

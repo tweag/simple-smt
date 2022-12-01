@@ -1,55 +1,54 @@
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE PatternGuards #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms   #-}
-{-# LANGUAGE ViewPatterns      #-}
+{-# LANGUAGE PatternGuards #-}
+{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ViewPatterns #-}
 
 -- | A module providing a backend that launches solvers as external processes.
 module SimpleSMT.Solver.Process
-  ( SolverProcess(..)
-  , new
-  , wait
-  , stop
-  , with
-  , toBackend
-  ) where
+  ( SolverProcess (..),
+    new,
+    wait,
+    stop,
+    with,
+    toBackend,
+  )
+where
 
-import qualified SimpleSMT.Solver as Solver
-
-import Control.Monad (forever)
 import Control.Concurrent.Async (Async, async, cancel)
 import qualified Control.Exception as X
+import Control.Monad (forever)
 import Data.ByteString.Builder
-  ( Builder
-  , hPutBuilder
-  , byteString
-  , toLazyByteString
+  ( Builder,
+    byteString,
+    hPutBuilder,
+    toLazyByteString,
   )
 import qualified Data.ByteString.Char8 as BS
-import System.Exit(ExitCode)
-import System.IO (Handle, hClose, hFlush, hSetBinaryMode, hSetBuffering, BufferMode(..))
-import qualified System.Process.Typed as P (proc)
+import qualified SimpleSMT.Solver as Solver
+import System.Exit (ExitCode)
+import System.IO (BufferMode (..), Handle, hClose, hFlush, hSetBinaryMode, hSetBuffering)
 import System.Process.Typed
-  ( Process
-  , getStderr
-  , getStdin
-  , getStdout
-  , mkPipeStreamSpec
-  , setStderr
-  , setStdin
-  , setStdout
-  , startProcess
-  , stopProcess
-  , waitExitCode
+  ( Process,
+    getStderr,
+    getStdin,
+    getStdout,
+    mkPipeStreamSpec,
+    setStderr,
+    setStdin,
+    setStdout,
+    startProcess,
+    stopProcess,
+    waitExitCode,
   )
+import qualified System.Process.Typed as P (proc)
 
-data SolverProcess =
-  SolverProcess
-    { process :: Process Handle Handle Handle
-    -- ^ The process running the solver.
-    , errorReader :: Async ()
-    -- ^ A process reading the solver's error messages and logging them.
-    }
+data SolverProcess = SolverProcess
+  { -- | The process running the solver.
+    process :: Process Handle Handle Handle,
+    -- | A process reading the solver's error messages and logging them.
+    errorReader :: Async ()
+  }
 
 -- | Run a solver as a process.
 new ::
@@ -58,19 +57,23 @@ new ::
   -- | Arguments to pass to the solver's command.
   [String] ->
   -- | A function for logging the solver's creation, errors and termination.
-  (BS.ByteString -> IO ()) -> IO SolverProcess
+  (BS.ByteString -> IO ()) ->
+  IO SolverProcess
 new exe args logger = do
   solverProcess <-
     startProcess $
-    setStdin createLoggedPipe $
-    setStdout createLoggedPipe $ setStderr createLoggedPipe $ P.proc exe args
+      setStdin createLoggedPipe $
+        setStdout createLoggedPipe $ setStderr createLoggedPipe $ P.proc exe args
   -- log error messages created by the backend
   solverErrorReader <-
     async $
-    forever
-      (do errs <- BS.hGetLine $ getStderr solverProcess
-          logger $ "[stderr] " <> errs) `X.catch` \X.SomeException {} ->
-      return ()
+      forever
+        ( do
+            errs <- BS.hGetLine $ getStderr solverProcess
+            logger $ "[stderr] " <> errs
+        )
+        `X.catch` \X.SomeException {} ->
+          return ()
   return $ SolverProcess solverProcess solverErrorReader
   where
     createLoggedPipe =
@@ -78,9 +81,10 @@ new exe args logger = do
         hSetBinaryMode h True
         hSetBuffering h $ BlockBuffering Nothing
         return
-          ( h
-          , hClose h `X.catch` \ex ->
-              logger $ BS.pack $ show (ex :: X.IOException))
+          ( h,
+            hClose h `X.catch` \ex ->
+              logger $ BS.pack $ show (ex :: X.IOException)
+          )
 
 -- | Wait for the process to exit and cleanup its resources.
 wait :: SolverProcess -> IO ExitCode
@@ -99,8 +103,10 @@ with :: String -> [String] -> (BS.ByteString -> IO ()) -> (SolverProcess -> IO a
 with exe args logger = X.bracket (new exe args logger) stop
 
 infixr 5 :<
+
 pattern (:<) :: Char -> BS.ByteString -> BS.ByteString
 pattern c :< rest <- (BS.uncons -> Just (c, rest))
+
 -- | Make the solver process into a solver backend.
 toBackend :: SolverProcess -> Solver.Backend
 toBackend solver =
