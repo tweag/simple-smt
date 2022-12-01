@@ -1,15 +1,15 @@
 {-# LANGUAGE OverloadedStrings #-}
+
 module SimpleSMT.Tests.Solver (tests, testBackend) where
 
+import Data.ByteString.Builder (toLazyByteString)
+import qualified Data.ByteString.Lazy.Char8 as LBS
+import Data.IORef (newIORef, readIORef, writeIORef)
+import Data.List (isPrefixOf, unfoldr)
 import qualified SimpleSMT.SExpr as SExpr
 import qualified SimpleSMT.Solver as Solver
 import qualified SimpleSMT.Solver.Process as Process
 import qualified SimpleSMT.Tests.Sources as Src
-
-import qualified Data.ByteString.Lazy.Char8 as LBS
-import Data.ByteString.Builder (toLazyByteString)
-import Data.IORef (newIORef, readIORef, writeIORef)
-import Data.List (unfoldr, isPrefixOf)
 import Test.Tasty
 import Test.Tasty.HUnit
 
@@ -19,12 +19,13 @@ tests =
     "Solver"
     [ testBackend "dummy" Src.sources noLogging $ \todo -> do
         backend <- dummy
-        todo backend
-    , testBackend
+        todo backend,
+      testBackend
         "process"
         sourcesNoTerms
-        noLogging $ \todo ->
-        Process.with "z3" ["-in"] (const $ return ()) $ todo . Process.toBackend
+        noLogging
+        $ \todo ->
+          Process.with "z3" ["-in"] (const $ return ()) $ todo . Process.toBackend
     ]
   where
     noLogging = const $ return ()
@@ -35,14 +36,14 @@ dummy :: IO Solver.Backend
 dummy = do
   printSuccess <- newIORef False
   return $
-    Solver.Backend $ \cmd
-     -> do
-      res <-
-        process printSuccess $ unfoldr SExpr.parseSExpr $ toLazyByteString cmd
-      return res
+    Solver.Backend $ \cmd ->
+      do
+        res <-
+          process printSuccess $ unfoldr SExpr.parseSExpr $ toLazyByteString cmd
+        return res
   where
     process _ [] = return ""
-    process printSuccess (expr:exprs) = do
+    process printSuccess (expr : exprs) = do
       res <-
         case expr of
           SExpr.List [SExpr.Atom "check-sat"] -> return "unknown"
@@ -53,8 +54,8 @@ dummy = do
               if b
                 then "success"
                 else ""
-          SExpr.List ((SExpr.Atom "error"):_) -> return "error"
-          SExpr.List ((SExpr.Atom foo):_)
+          SExpr.List ((SExpr.Atom "error") : _) -> return "error"
+          SExpr.List ((SExpr.Atom foo) : _)
             | "get-" `isPrefixOf` foo -> return "()"
           SExpr.List _ -> do
             printSuccess' <- readIORef printSuccess
@@ -68,26 +69,28 @@ dummy = do
 -- | Test a backend by using it to run a list of examples.
 testBackend ::
   -- | The name of the test group.
-     String
+  String ->
   -- | A list of examples on which to run the backend.
-  -> [Src.Source]
+  [Src.Source] ->
   -- | A function for logging the solver's activity.
-  -> (LBS.ByteString -> IO ())
+  (LBS.ByteString -> IO ()) ->
   -- | A function that should create a backend, run a given
   -- computation and release the backend's resources.
-  -> ((Solver.Backend -> Assertion) -> Assertion)
-  -> TestTree
+  ((Solver.Backend -> Assertion) -> Assertion) ->
+  TestTree
 testBackend name sources logger with =
   testGroup name $ do
     lazyMode <- [False, True]
     return $
       testGroup
-        (if lazyMode
-           then "lazy"
-           else "eager") $ do
-        source <- sources
-        return $
-          testCase (Src.name source) $
-          with $ \backend -> do
-            solver <- Solver.initSolverWith backend lazyMode logger
-            Src.run source solver
+        ( if lazyMode
+            then "lazy"
+            else "eager"
+        )
+        $ do
+          source <- sources
+          return $
+            testCase (Src.name source) $
+              with $ \backend -> do
+                solver <- Solver.initSolverWith backend lazyMode logger
+                Src.run source solver

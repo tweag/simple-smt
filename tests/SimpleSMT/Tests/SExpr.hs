@@ -1,12 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
-module SimpleSMT.Tests.SExpr (tests) where
 
-import qualified SimpleSMT.SExpr as SExpr
-import qualified SimpleSMT.Tests.Sources as Src
+module SimpleSMT.Tests.SExpr (tests) where
 
 import Control.Monad (zipWithM_)
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import Data.List (unfoldr)
+import qualified SimpleSMT.SExpr as SExpr
+import qualified SimpleSMT.Tests.Sources as Src
 import Test.Tasty
 import Test.Tasty.HUnit
 
@@ -16,8 +16,8 @@ tests =
     "SExpr"
     [ testGroup
         "Parsing"
-        [ testParser "from Strings" $ unfoldr SExpr.readSExpr
-        , testParser "from ByteStrings" $ unfoldr SExpr.parseSExpr . LBS.pack
+        [ testParser "from Strings" $ unfoldr SExpr.readSExpr,
+          testParser "from ByteStrings" $ unfoldr SExpr.parseSExpr . LBS.pack
         ]
     ]
 
@@ -29,15 +29,19 @@ testParser name parse = testGroup name $ do
       let expecteds = Src.parse source
           gots = parse $ Src.content source
       zipWithM_
-        (\expected got ->
-           assertBool
-             ("  parsed:   '" ++ show got ++ "\n  expected: '" ++ show expected) $
-           expected == got)
+        ( \expected got ->
+            assertBool
+              ("  parsed:   '" ++ show got ++ "\n  expected: '" ++ show expected)
+              $ expected == got
+        )
         expecteds
         gots
       let numExpected = length expecteds
           numGot = length gots
       assertBool
-        ("parsed " ++
-         show numGot ++ " expressions but expected " ++ show numExpected) $
-        numExpected == numGot
+        ( "parsed "
+            ++ show numGot
+            ++ " expressions but expected "
+            ++ show numExpected
+        )
+        $ numExpected == numGot
