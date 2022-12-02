@@ -15,6 +15,7 @@
       pkgs = nixpkgs.legacyPackages.${system};
       hpkgs = pkgs.haskellPackages;
       simple-smt = hpkgs.callCabal2nix "simple-smt" ./. {};
+      simple-smt-tests = hpkgs.callCabal2nix "simple-smt-tests" ./tests {};
       simple-smt-z3 = hpkgs.callCabal2nix "simple-smt-z3" ./Z3 {};
     in {
       formatter = pkgs.alejandra;
@@ -22,9 +23,8 @@
         default = hpkgs.shellFor {
           packages = p: [
             simple-smt
-            ## TODO fails on the import of simple-smt-tests
-            ## Should simple-smt-tests be declared as a library?
-            # simple-smt-z3
+            simple-smt-tests
+            simple-smt-z3
           ];
           withHoogle = true;
           buildInputs =
