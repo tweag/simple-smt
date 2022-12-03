@@ -16,7 +16,9 @@
       hpkgs = pkgs.haskellPackages;
       simple-smt = hpkgs.callCabal2nix "simple-smt" ./. {};
       simple-smt-tests = hpkgs.callCabal2nix "simple-smt-tests" ./tests {};
-      simple-smt-z3 = hpkgs.callCabal2nix "simple-smt-z3" ./Z3 {};
+      simple-smt-z3 = hpkgs.callCabal2nix "simple-smt-z3" ./Z3 {
+        inherit simple-smt-tests;
+      };
     in {
       formatter = pkgs.alejandra;
       devShells = {
