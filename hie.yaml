@@ -1,0 +1,10 @@
+cradle:
+  cabal:
+    - path: "./Z3/src"
+      component: "simple-smt-z3:libs"
+    - path: "./Z3/tests"
+      component: "simple-smt-z3:tests"
+    - path: "./src/"
+      component: "simple-smt:libs"
+    - path: "./tests/"
+      component: "simple-smt:tests"
