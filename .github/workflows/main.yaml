@@ -14,14 +14,12 @@ jobs:
     - name: Install nix
       uses: cachix/install-nix-action@v18
       with:
-        nix_path: nixpkgs=channel:nixos-unstable
         extra_nix_config: |
           access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
-    - run: |
-        nix develop
-        cabal update # REVIEW packages should be installed by nix
-        cabal test
-        cabal test Z3
+    - name: Processes test
+      run: nix develop --command cabal test
+    - name: Z3 backend test
+      run: nix develop --command cabal test Z3
 
   formatting:
     runs-on: ubuntu-latest
