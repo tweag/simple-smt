@@ -6,7 +6,21 @@ on:
   pull_request:
 
 jobs:
-  build:
+  testing:
+    runs-on: ubuntu-latest
+    name: Run test suites
+    steps:
+    - uses: actions/checkout@v3.1.0
+    - name: Install nix
+      uses: cachix/install-nix-actions@v18
+      with:
+        nix_path: nixpkgs=channel:nixos-unstable
+    - run: |
+        nix develop
+        cabal test
+        cabal test Z3
+
+  formatting:
     runs-on: ubuntu-latest
     name: Check formatting
     steps:
