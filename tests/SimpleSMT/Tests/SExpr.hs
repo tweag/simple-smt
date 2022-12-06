@@ -17,7 +17,7 @@ tests =
     [ testGroup
         "Parsing"
         [ -- testParser "from Strings" $ unfoldr SExpr.readSExpr,
-          -- ^^ TODO Either fix it or abandon SExpressions
+          -- \^^ TODO Either fix it or abandon SExpressions
           testParser "from ByteStrings" $ unfoldr SExpr.parseSExpr . LBS.pack
         ]
     ]
